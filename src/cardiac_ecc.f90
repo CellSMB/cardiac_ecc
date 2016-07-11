@@ -178,14 +178,20 @@ PROGRAM CARDIAC_ECC
   INTEGER(CMISSIntg) :: ryrModelIndex,GeometricMeshComponent
   INTEGER(CMISSIntg) :: Err,EquationsSetIndex,NODE_NUMBER,CONDITION,CellMLIndex,ELEM_NUMBER
   INTEGER(CMISSIntg) :: SL_BD_MARKER,MITO_BD_MARKER,MITO_REGION_MARKER, &
-    & WITH_MITO_ELEMENTS,ELEM_LABEL,CYTO_REGION_MARKER,MODEL_ON
+    & WITH_MITO_ELEMENTS,ELEM_LABEL,CYTO_REGION_MARKER,MODEL_ON, NUC_REGION_MARKER, NUC_BD_MARKER
   REAL(CMISSDP) :: startT,endT,Tstep,ODE_TIME_STEP,VALUE,init_Ca,init_FCa, init_F, ryr_nodex,ryr_nodey,ryr_nodez, &
     & caDiffx, caDiffy,caDiffz,fcaDiffx, fcaDiffy,fcaDiffz,fDiffx,fDiffy,fDiffz,store_coeff,iCa,init_CaTnC, &
     & NodeRyRDensity,mitoCaDiffx,mitoCaDiffy,mitoCaDiffz,mito_initCa,mito_initF, mito_initFCa,mito_initCaTnC,&
     & mitoFDiffx,mitoFDiffy,mitoFDiffz,mitoFCaDiffx,mitoFCaDiffy,mitoFCaDiffz,init_CaM,init_ATP,init_CaMCa,init_ATPCa, &
     & mitoCaMDiffx,mitoCaMDiffy,mitoCaMDiffz,mitoCaMCaDiffx,mitoCaMCaDiffy,mitoCaMCaDiffz,mitoATPDiffx,mitoATPDiffy,mitoATPDiffz, &
     & mitoATPCaDiffx,mitoATPCaDiffy,mitoATPCaDiffz,CaMDiffx, CaMDiffy,CaMDiffz,CaMCaDiffx, CaMCaDiffy,CaMCaDiffz, &
-    & ATPDiffx, ATPDiffy,ATPDiffz,ATPCaDiffx, ATPCaDiffy,ATPCaDiffz,mito_initCaM, mito_initCaMCa,mito_initATP, mito_initATPCa
+    & ATPDiffx, ATPDiffy,ATPDiffz,ATPCaDiffx, ATPCaDiffy,ATPCaDiffz,mito_initCaM, mito_initCaMCa,mito_initATP, mito_initATPCa, &
+    & nucCaDiffx,nucCaDiffy,nucCaDiffz,nuc_initCa,nuc_initF, nuc_initFCa,nuc_initCaTnC,&
+    & nucFDiffx,nucFDiffy,nucFDiffz,nucFCaDiffx,nucFCaDiffy,nucFCaDiffz, &
+    & nucCaMDiffx,nucCaMDiffy,nucCaMDiffz,nucCaMCaDiffx,nucCaMCaDiffy,nucCaMCaDiffz,nucATPDiffx,nucATPDiffy,nucATPDiffz, &
+    & nucATPCaDiffx,nucATPCaDiffy,nucATPCaDiffz, &
+    & nuc_initCaM, nuc_initCaMCa,nuc_initATP, nuc_initATPCa
+    
   INTEGER(CMISSIntg) :: NumRyRsPerCluster,NonZeroNodes,MITOBDFaceNode_idx,NUMBER_OF_MITOBDFACES
   CHARACTER(250) :: CELLID,NODEFILE,ELEMFILE,CELLPATH,RyRModel,RYRDENSITYFILE,MITOBDFACEFILE,CELLBDNODESFILE
   INTEGER(CMISSIntg) :: NumberOfComputationalNodes,ComputationalNodeNumber,NodeDomain,ElementDomain
@@ -225,6 +231,8 @@ PROGRAM CARDIAC_ECC
     READ(9,*) CELLID
     READ(9,*)
     READ(9,*) WITH_MITO_ELEMENTS
+    READ(9,*) 
+    READ(9,*) SL_BD_MARKER,MITO_BD_MARKER,MITO_REGION_MARKER,CYTO_REGION_MARKER,NUC_REGION_MARKER,NUC_BD_MARKER
     READ(9,*)
     READ(9,*) NODEFILE,ELEMFILE
     READ(9,*)
@@ -264,7 +272,23 @@ PROGRAM CARDIAC_ECC
     READ(9,*)
     READ(9,*) mito_initATPCa,mitoATPCaDiffx,mitoATPCaDiffy,mitoATPCaDiffz
     READ(9,*)
-    READ(9,*) mito_initCaTnC
+    READ(9,*) nuc_initCaTnC
+    READ(9,*)
+    READ(9,*) nuc_initCa,nucCaDiffx,nucCaDiffy,nucCaDiffz
+    READ(9,*)
+    READ(9,*) nuc_initF,nucFDiffx,nucFDiffy,nucFDiffz
+    READ(9,*)
+    READ(9,*) nuc_initFCa,nucFCaDiffx,nucFCaDiffy,nucFCaDiffz
+    READ(9,*)
+    READ(9,*) nuc_initCaM,nucCaMDiffx,nucCaMDiffy,nucCaMDiffz
+    READ(9,*)
+    READ(9,*) nuc_initCaMCa,nucCaMCaDiffx,nucCaMCaDiffy,nucCaMCaDiffz
+    READ(9,*)
+    READ(9,*) nuc_initATP,nucATPDiffx,nucATPDiffy,nucATPDiffz
+    READ(9,*)
+    READ(9,*) nuc_initATPCa,nucATPCaDiffx,nucATPCaDiffy,nucATPCaDiffz
+    READ(9,*)
+    READ(9,*) nuc_initCaTnC    
     READ(9,*)
     READ(9,*) startT,endT,Tstep,ODE_TIME_STEP
     READ(9,*) 
@@ -324,13 +348,7 @@ PROGRAM CARDIAC_ECC
   WRITE(*,*) 'Tstep=',Tstep
   WRITE(*,*) 'ODE_Tstep=',ODE_TIME_STEP
   WRITE(*,*) 'Output Frequency=',outputfreq
-
-
-  !Boundary Markers
-  SL_BD_MARKER=0
-  MITO_BD_MARKER=20
-  MITO_REGION_MARKER = 1
-  CYTO_REGION_MARKER = 2
+  
   
   EXPORT_FIELD=.FALSE.
 !_________________________________________________________________________________________________
@@ -414,6 +432,12 @@ PROGRAM CARDIAC_ECC
             NODE_NUMBER = ElemMap(i,node)
             NodeNums(NODE_NUMBER,2) = MITO_REGION_MARKER
           ENDDO
+        ELSEIF(ElemMap(i,6).EQ.NUC_REGION_MARKER) THEN
+          DO node = 2,5
+            NODE_NUMBER = ElemMap(i,node)
+            NodeNums(NODE_NUMBER,2) = NUC_REGION_MARKER
+          ENDDO
+
         ENDIF
       ENDDO
 
@@ -510,23 +534,25 @@ PROGRAM CARDIAC_ECC
   !Finish creating the field
   CALL cmfe_Field_CreateFinish(GeometricField,Err)
 
-  !Set the geometric field values
+  WRITE(*,*) 'Set the geometric field values'
 
   DO i = 1,NUMBER_OF_NODES
     node = NodeNums(i,1)
-    CALL cmfe_Decomposition_NodeDomainGet(Decomposition,node,1,NodeDomain,Err)
-    IF(NodeDomain==ComputationalNodeNumber) THEN
-      nodex = NodeCoords(i,1)
-      nodey = NodeCoords(i,2)
-      nodez = NodeCoords(i,3)
-      CALL cmfe_Field_ParameterSetUpdateNode(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,1, &
-       &   1,node,1,nodex,Err)
-      CALL cmfe_Field_ParameterSetUpdateNode(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,1, &
-       &   1,node,2,nodey,Err)
-      CALL cmfe_Field_ParameterSetUpdateNode(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,1, &
-       &   1,node,3,nodez,Err)
-     ENDIF
-    ENDDO
+    IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,node,1,NodeDomain,Err)
+      IF(NodeDomain==ComputationalNodeNumber) THEN
+        nodex = NodeCoords(i,1)
+        nodey = NodeCoords(i,2)
+        nodez = NodeCoords(i,3)
+        CALL cmfe_Field_ParameterSetUpdateNode(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,1, &
+         &   1,node,1,nodex,Err)
+        CALL cmfe_Field_ParameterSetUpdateNode(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,1, &
+         &   1,node,2,nodey,Err)
+        CALL cmfe_Field_ParameterSetUpdateNode(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,1, &
+        &   1,node,3,nodez,Err)
+      ENDIF
+    ENDIF
+  ENDDO
   CALL cmfe_Field_ParameterSetUpdateStart(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,Err)
   CALL cmfe_Field_ParameterSetUpdateFinish(GeometricField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,Err)
 
@@ -542,6 +568,7 @@ PROGRAM CARDIAC_ECC
 !###################
   !Ca equations
 !###################
+  WRITE(*,*) 'Setting up Ca Equations'
   CALL cmfe_EquationsSet_Initialise(CaEquationsSet,Err)
   CALL cmfe_Field_Initialise(CaEquationsSetField,Err)
   CALL cmfe_EquationsSet_CreateStart(CaEquationsSetUserNumber,Region, & 
@@ -566,11 +593,16 @@ PROGRAM CARDIAC_ECC
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
-          CALL cmfe_Field_ParameterSetUpdateNode(CaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCa,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
+            CALL cmfe_Field_ParameterSetUpdateNode(CaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCa,Err)
+          ELSEIF(NodeNums(i,2).EQ.NUC_REGION_MARKER) THEN
+            CALL cmfe_Field_ParameterSetUpdateNode(CaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initCa,Err)        
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
@@ -608,6 +640,14 @@ PROGRAM CARDIAC_ECC
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoCaDiffy,Err)
           CALL cmfe_Field_ParameterSetUpdateElement(CaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoCaDiffz,Err)
+        ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+          !element based assignment of diffusion properties
+          CALL cmfe_Field_ParameterSetUpdateElement(CaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucCaDiffx,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(CaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucCaDiffy,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(CaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucCaDiffz,Err)
         ELSE
           CALL cmfe_Field_ParameterSetUpdateElement(CaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,caDiffx,Err)
@@ -648,7 +688,7 @@ PROGRAM CARDIAC_ECC
     & 1,iCa,Err)
 
 !###################
-  !RyRDenseField and RyRReleaseLagField
+    WRITE(*,*) 'set up RyRDenseField and RyRReleaseLagField'
 !###################
   !Set up RyR spatial density field and the RyRReleaseLagFields
   !Read in file containing estimates of spatial density and time lag of release at each node
@@ -664,7 +704,7 @@ PROGRAM CARDIAC_ECC
     ENDDO
   ENDIF 
   CLOSE(12)
-PRINT *,'______________________________________________________________________________'
+!______________________________________________________________________________'
   !set up intensity field
   CALL cmfe_Field_Initialise(RyRDenseField,Err)
   CALL cmfe_Field_CreateStart(RyRDenseFieldUserNumber,Region,RyRDenseField,Err)
@@ -722,6 +762,11 @@ PRINT *,'_______________________________________________________________________
           & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,0.0_CMISSDP,Err)
         CALL cmfe_Field_ParameterSetUpdateNode(RyRReleaseLagField,cmfe_FIELD_U_VARIABLE_TYPE, &
           & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,0.0_CMISSDP,Err)
+      ELSEIF(NodeNums(node,2).EQ.NUC_REGION_MARKER) THEN !if node is nuc-associated node, then don't release from there. 
+        CALL cmfe_Field_ParameterSetUpdateNode(RyRDenseField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,0.0_CMISSDP,Err)
+        CALL cmfe_Field_ParameterSetUpdateNode(RyRReleaseLagField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,0.0_CMISSDP,Err)
 
       ELSE
         CALL cmfe_Field_ParameterSetUpdateNode(RyRDenseField,cmfe_FIELD_U_VARIABLE_TYPE, &
@@ -745,10 +790,10 @@ PRINT *,'_______________________________________________________________________
 
   !Set up the fields for the other buffers which will store concentrations of the Ca-Buffer complex
 !###################
-  !F equations
+  WRITE(*,*) 'Setting up F equations'
 !###################
   CALL cmfe_EquationsSet_Initialise(FEquationsSet,Err)
-PRINT *,'______________________________________________________________________________'
+!______________________________________________________________________________'
   CALL cmfe_Field_Initialise(FEquationsSetField,Err)
   CALL cmfe_EquationsSet_CreateStart(FEquationsSetUserNumber,Region, & 
     & GeometricField,[cmfe_EQUATIONS_SET_CLASSICAL_FIELD_CLASS, &
@@ -759,7 +804,6 @@ PRINT *,'_______________________________________________________________________
   !Finish creating the equations set
   CALL cmfe_EquationsSet_CreateFinish(FEquationsSet,Err)
 
-PRINT *,'______________________________________________________________________________'
   !Create the equations set dependent field variables for F
   CALL cmfe_Field_Initialise(FField,Err)
   CALL cmfe_EquationsSet_DependentCreateStart(FEquationsSet,FFieldUserNumber,FField,Err)
@@ -772,18 +816,23 @@ PRINT *,'_______________________________________________________________________
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
-          CALL cmfe_Field_ParameterSetUpdateNode(FField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initF,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
+            CALL cmfe_Field_ParameterSetUpdateNode(FField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initF,Err)
+          ELSEIF(NodeNums(i,2).EQ.NUC_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
+            CALL cmfe_Field_ParameterSetUpdateNode(FField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initF,Err)
+
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
     CALL cmfe_Field_ParameterSetUpdateStart(FField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,Err)
     CALL cmfe_Field_ParameterSetUpdateFinish(FField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,Err)
   ENDIF
-PRINT *,'______________________________________________________________________________'
   !Create the equations set material field variables - F
   CALL cmfe_Field_Initialise(FMaterialsField,Err)
   CALL cmfe_EquationsSet_MaterialsCreateStart(FEquationsSet,FMaterialsFieldUserNumber,FMaterialsField,Err)
@@ -798,7 +847,6 @@ PRINT *,'_______________________________________________________________________
   ENDIF
   !Finish the equations set materials field variables
   CALL cmfe_EquationsSet_MaterialsCreateFinish(FEquationsSet,Err)
-PRINT *,'______________________________________________________________________________'
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
 
     DO i=1,NUMBER_OF_ELEMENTS
@@ -814,6 +862,15 @@ PRINT *,'_______________________________________________________________________
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoFDiffy,Err)
           CALL cmfe_Field_ParameterSetUpdateElement(FMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoFDiffz,Err)
+        ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+          !element based assignment of diffusion properties
+          CALL cmfe_Field_ParameterSetUpdateElement(FMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucFDiffx,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(FMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucFDiffy,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(FMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucFDiffz,Err)
+
         ELSE
           CALL cmfe_Field_ParameterSetUpdateElement(FMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,fDiffx,Err)
@@ -837,7 +894,6 @@ PRINT *,'_______________________________________________________________________
   ENDIF
   CALL cmfe_Field_ComponentValuesInitialise(FMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE, &
    & 4,store_coeff,Err) ! storage coefficient 
-PRINT *,'______________________________________________________________________________'
   !Set up source field for reaction diffusion equation set. Note that for the split problem subtype, the source field is not used at all.
   !iFField
   CALL cmfe_Field_Initialise(iFField,Err)
@@ -848,9 +904,8 @@ PRINT *,'_______________________________________________________________________
   !Initialising the iField to zero everywhere. Might modify for RyRs in a later loop.
   CALL cmfe_Field_ComponentValuesInitialise(iFField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE, &
     & 1,0.0_CMISSDP,Err)
-PRINT *,'F equations'
 !###################
-  !FCa equations
+  WRITE(*,*) 'Setting up FCa equations'
 !###################
   CALL cmfe_EquationsSet_Initialise(FCaEquationsSet,Err)
   CALL cmfe_Field_Initialise(FCaEquationsSetField,Err)
@@ -876,11 +931,17 @@ PRINT *,'F equations'
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
-          CALL cmfe_Field_ParameterSetUpdateNode(FCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initFCa,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
+            CALL cmfe_Field_ParameterSetUpdateNode(FCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initFCa,Err)
+          ELSEIF(NodeNums(i,2).EQ.NUC_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init. 
+            CALL cmfe_Field_ParameterSetUpdateNode(FCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initFCa,Err)
+
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
@@ -919,6 +980,15 @@ PRINT *,'F equations'
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoFCaDiffy,Err)
           CALL cmfe_Field_ParameterSetUpdateElement(FCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoFCaDiffz,Err)
+        ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+          !element based assignment of diffusion properties
+          CALL cmfe_Field_ParameterSetUpdateElement(FCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucFCaDiffx,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(FCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucFCaDiffy,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(FCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucFCaDiffz,Err)
+
         ELSE
           CALL cmfe_Field_ParameterSetUpdateElement(FCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,fcaDiffx,Err)
@@ -956,7 +1026,7 @@ PRINT *,'F equations'
 PRINT *,'FCa equations'
 
   !###################
-  !CaM equations
+    WRITE(*,*) 'Setting up CaM equations'
   !###################
   CALL cmfe_EquationsSet_Initialise(CaMEquationsSet,Err)
   CALL cmfe_Field_Initialise(CaMEquationsSetField,Err)
@@ -982,11 +1052,17 @@ PRINT *,'FCa equations'
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
-          CALL cmfe_Field_ParameterSetUpdateNode(CaMField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCaM,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(CaMField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCaM,Err)
+          ELSEIF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(CaMField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initCaM,Err)
+
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
@@ -1025,6 +1101,15 @@ PRINT *,'FCa equations'
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoCaMDiffy,Err)
         CALL cmfe_Field_ParameterSetUpdateElement(CaMMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoCaMDiffz,Err)
+      ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+      !element based assignment of diffusion properties
+        CALL cmfe_Field_ParameterSetUpdateElement(CaMMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucCaMDiffx,Err)
+        CALL cmfe_Field_ParameterSetUpdateElement(CaMMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucCaMDiffy,Err)
+        CALL cmfe_Field_ParameterSetUpdateElement(CaMMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucCaMDiffz,Err)
+
         ELSE
           CALL cmfe_Field_ParameterSetUpdateElement(CaMMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,CaMDiffx,Err)
@@ -1088,11 +1173,16 @@ PRINT *,'CaM equations'
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
-          CALL cmfe_Field_ParameterSetUpdateNode(CaMCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCaMCa,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(CaMCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCaMCa,Err)
+          ELSEIF(NodeNums(i,2).EQ.NUC_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(CaMCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initCaMCa,Err)
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
@@ -1131,6 +1221,15 @@ PRINT *,'CaM equations'
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoCaMCaDiffy,Err)
           CALL cmfe_Field_ParameterSetUpdateElement(CaMCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoCaMCaDiffz,Err)
+        ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+        !element based assignment of diffusion properties
+          CALL cmfe_Field_ParameterSetUpdateElement(CaMCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucCaMCaDiffx,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(CaMCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucCaMCaDiffy,Err)
+          CALL cmfe_Field_ParameterSetUpdateElement(CaMCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+            & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucCaMCaDiffz,Err)
+
         ELSE
           CALL cmfe_Field_ParameterSetUpdateElement(CaMCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
             & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,CaMCaDiffx,Err)
@@ -1194,11 +1293,16 @@ PRINT *,'CaMCa equations'
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
-          CALL cmfe_Field_ParameterSetUpdateNode(ATPField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initATP,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(ATPField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initATP,Err)
+          ELSEIF(NodeNums(i,2).EQ.NUC_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(ATPField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initATP,Err)
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
@@ -1237,6 +1341,15 @@ PRINT *,'CaMCa equations'
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoATPDiffy,Err)
         CALL cmfe_Field_ParameterSetUpdateElement(ATPMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoATPDiffz,Err)
+      ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+      !element based assignment of diffusion properties
+        CALL cmfe_Field_ParameterSetUpdateElement(ATPMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucATPDiffx,Err)
+        CALL cmfe_Field_ParameterSetUpdateElement(ATPMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucATPDiffy,Err)
+        CALL cmfe_Field_ParameterSetUpdateElement(ATPMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucATPDiffz,Err)
+
       ELSE
         CALL cmfe_Field_ParameterSetUpdateElement(ATPMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,ATPDiffx,Err)
@@ -1300,11 +1413,16 @@ PRINT *,'ATP equations'
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
     DO i=1,NUMBER_OF_NODES
       NODE_NUMBER = NodeNums(i,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
-          CALL cmfe_Field_ParameterSetUpdateNode(ATPCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initATPCa,Err)
+      IF(Nodenums(i,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(i,2).EQ.MITO_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(ATPCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initATPCa,Err)
+          ELSEIF(NodeNums(i,2).EQ.NUC_REGION_MARKER) THEN !if node is mito-associated node, then set initial conc. to mito_init.
+            CALL cmfe_Field_ParameterSetUpdateNode(ATPCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initATPCa,Err)
+          ENDIF
         ENDIF
       ENDIF
     ENDDO
@@ -1343,6 +1461,15 @@ PRINT *,'ATP equations'
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,mitoATPCaDiffy,Err)
         CALL cmfe_Field_ParameterSetUpdateElement(ATPCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,mitoATPCaDiffz,Err)
+      ELSEIF(ELEM_LABEL.EQ.NUC_REGION_MARKER) THEN
+      !element based assignment of diffusion properties
+        CALL cmfe_Field_ParameterSetUpdateElement(ATPCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,nucATPCaDiffx,Err)
+        CALL cmfe_Field_ParameterSetUpdateElement(ATPCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,2,nucATPCaDiffy,Err)
+        CALL cmfe_Field_ParameterSetUpdateElement(ATPCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+          & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,3,nucATPCaDiffz,Err)
+
       ELSE
         CALL cmfe_Field_ParameterSetUpdateElement(ATPCaMaterialsField,cmfe_FIELD_U_VARIABLE_TYPE, &
           & cmfe_FIELD_VALUES_SET_TYPE,ELEM_NUMBER,1,ATPCaDiffx,Err)
@@ -1410,14 +1537,20 @@ PRINT *,'ATPCa equations'
   ELSE
     DO node=1,NUMBER_OF_NODES
       NODE_NUMBER=NodeNums(node,1)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        IF(NodeNums(node,2).EQ.MITO_BD_MARKER .OR. NodeNums(node,2).EQ.MITO_REGION_MARKER) THEN
-          CALL cmfe_Field_ParameterSetUpdateNode(CaTnCField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCaTnC,Err)
-        ELSE
-          CALL cmfe_Field_ParameterSetUpdateNode(CaTnCField,cmfe_FIELD_U_VARIABLE_TYPE, &
-            & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_CaTnC,Err)
+      IF(Nodenums(node,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+        IF(NodeDomain==ComputationalNodeNumber) THEN
+          IF(NodeNums(node,2).EQ.MITO_BD_MARKER .OR. NodeNums(node,2).EQ.MITO_REGION_MARKER) THEN
+            CALL cmfe_Field_ParameterSetUpdateNode(CaTnCField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,mito_initCaTnC,Err)
+          ELSEIF(NodeNums(node,2).EQ.NUC_BD_MARKER .OR. NodeNums(node,2).EQ.NUC_REGION_MARKER) THEN
+            CALL cmfe_Field_ParameterSetUpdateNode(CaTnCField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,nuc_initCaTnC,Err)
+
+          ELSE
+            CALL cmfe_Field_ParameterSetUpdateNode(CaTnCField,cmfe_FIELD_U_VARIABLE_TYPE, &
+              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_CaTnC,Err)
+          ENDIF
         ENDIF
       ENDIF
     ENDDO  
@@ -1541,11 +1674,13 @@ PRINT *,'ATPCa equations'
     IF(WITH_MITO_ELEMENTS.EQ.1) THEN
       DO node=1,NUMBER_OF_NODES
         NODE_NUMBER=NodeNums(node,1)
-        CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-        IF(NodeDomain==ComputationalNodeNumber) THEN
-          IF(NodeNums(node,2).EQ.MITO_REGION_MARKER) THEN
-            CALL cmfe_Field_ParameterSetUpdateNode(CellMLModelsField,cmfe_FIELD_U_VARIABLE_TYPE, &
-              & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,0_CMISSIntg,Err)
+        IF(Nodenums(node,2).NE.-1) THEN !ignore nodes that have a -1 boundary marker
+          CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
+          IF(NodeDomain==ComputationalNodeNumber) THEN
+            IF(NodeNums(node,2).EQ.MITO_REGION_MARKER) THEN
+              CALL cmfe_Field_ParameterSetUpdateNode(CellMLModelsField,cmfe_FIELD_U_VARIABLE_TYPE, &
+                & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,0_CMISSIntg,Err)
+            ENDIF
           ENDIF
         ENDIF
       ENDDO  
@@ -1843,103 +1978,9 @@ PRINT *,'ATPCa equations'
       ENDIF
     ENDDO
   ENDIF
-  !set no flux bc if node is a mito boundary node.
 
   IF(WITH_MITO_ELEMENTS.EQ.1) THEN
-    DO node=1,NUMBER_OF_MITOBDFACENODES
-      NODE_NUMBER = MITOBDFaceNodes(node)
-      CALL cmfe_Decomposition_NodeDomainGet(Decomposition,NODE_NUMBER,1,NodeDomain,Err)
-      IF(NodeDomain==ComputationalNodeNumber) THEN
-        CONDITION = cmfe_BOUNDARY_CONDITION_FIXED
-        VALUE=0.0_CMISSDP
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,CaField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)!
 
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,FField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,FCaField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)
-
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,CaMField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,CaMCaField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,ATPField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,ATPCaField, &
-          & cmfe_FIELD_DELUDELN_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,VALUE,Err) !(neumann boundary condition - no flux)
-
-        !make sure to unset mito bd node bcs to be free from dirchlet bcs set above.
-
-        CONDITION = cmfe_BOUNDARY_CONDITION_FREE
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,CaField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_Ca,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,FField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_F,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,FCaField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_FCa,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,CaMField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_CaM,Err) !(neumann boundary condition - no flux)
-
-         CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,CaMCaField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_CaMCa,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,ATPField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_ATP,Err) !(neumann boundary condition - no flux)
-
-        CALL cmfe_BoundaryConditions_SetNode(BoundaryConditions,ATPCaField, &
-          & cmfe_FIELD_U_VARIABLE_TYPE,1,cmfe_NO_GLOBAL_DERIV, &
-          & NODE_NUMBER,1,CONDITION,init_ATPCa,Err) !(neumann boundary condition - no flux)
-
-
-
-        !Set the initial conc. at these mito boundary nodes to be the cytosolic versions
-        CALL cmfe_Field_ParameterSetUpdateNode(CaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_Ca,Err)
-
-        CALL cmfe_Field_ParameterSetUpdateNode(FField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_F,Err)
-
-        CALL cmfe_Field_ParameterSetUpdateNode(FCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_FCa,Err)
-
-        CALL cmfe_Field_ParameterSetUpdateNode(CaMField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_CaM,Err)
-
-
-        CALL cmfe_Field_ParameterSetUpdateNode(CaMCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_CaMCa,Err)
-
-        CALL cmfe_Field_ParameterSetUpdateNode(ATPField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_ATP,Err)
-
-        CALL cmfe_Field_ParameterSetUpdateNode(ATPCaField,cmfe_FIELD_U_VARIABLE_TYPE, &
-          & cmfe_FIELD_VALUES_SET_TYPE,1,1,NODE_NUMBER,1,init_ATPCa,Err)
-
-
-      ENDIF
-    ENDDO
     CALL cmfe_Field_ParameterSetUpdateStart(CaField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,Err)
     CALL cmfe_Field_ParameterSetUpdateFinish(CaField,cmfe_FIELD_U_VARIABLE_TYPE,cmfe_FIELD_VALUES_SET_TYPE,Err)
 
