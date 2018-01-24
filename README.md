@@ -40,7 +40,7 @@ cube_spark/:
 RUNNING THE PROGRAM
 -------------------
 1. Interested users need to install compiled versions of the opencmiss libraries. Instructions and support are available at www.opencmiss.org. 
-2. Once installed, the Makefile must be edited in order to compile the main program in src/ against the opencmiss libraries.
-3. File 'inputs.txt' contains default settings to run a simulation. Comments (prefixed by #) explain the different input variables. 
- 
-
+2. Once installed, generate a Makefile in the cardiac_ecc directory using using CMake: "cmake -DOpenCMISSLibs_DIR=YOUR_OPENCMISS_INSTALL_DIR_HERE ."
+3. Build the Fortran source file with the generated Makefile: "make"
+4. File 'inputs.txt' contains default settings to run a simulation. Comments (prefixed by #) explain the different input variables.
+5. Run the executable: "./src/fortran/cardiac_ecc_fortran"
